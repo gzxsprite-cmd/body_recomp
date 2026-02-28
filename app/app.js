@@ -1,4 +1,5 @@
 import { TimerEngine } from "./core/timerEngine.js";
+import { parseAndValidateSessionScript } from "./core/sessionScriptValidator.js";
 import { saveLastSessionData, loadLastSessionData } from "./storage/localStore.js";
 
 const state = {
@@ -7,7 +8,9 @@ const state = {
   engine: null,
   feedbackSubmitted: false,
   sessionResult: null,
-  eventLogs: []
+  eventLogs: [],
+  importMessage: "",
+  importError: ""
 };
 
 const app = document.getElementById("app");
@@ -38,6 +41,21 @@ async function init() {
   render();
 }
 
+function applyImportedScript(rawText, sourceLabel) {
+  const { valid, error, script } = parseAndValidateSessionScript(rawText);
+  if (!valid) {
+    state.importError = error;
+    state.importMessage = "";
+    render();
+    return;
+  }
+
+  state.script = script;
+  state.importError = "";
+  state.importMessage = `已成功导入：${script.session_name}（来源：${sourceLabel}）`;
+  render();
+}
+
 function renderLoadPage() {
   const steps = state.script?.steps ?? [];
   const plannedSets = steps.reduce((acc, s) => acc + s.sets, 0);
@@ -48,7 +66,19 @@ function renderLoadPage() {
       <p><strong>Session:</strong> ${state.script.session_name}</p>
       <p><strong>Step 数:</strong> ${state.script.total_steps}</p>
       <p><strong>计划组数:</strong> ${plannedSets}</p>
+      ${state.importMessage ? `<p class="ok-msg">${state.importMessage}</p>` : ""}
+      ${state.importError ? `<p class="error-msg">${state.importError}</p>` : ""}
       <button id="start-session">开始训练</button>
+    </section>
+    <section class="card">
+      <h2>导入 Session Script JSON</h2>
+      <label>方式1：文件选择导入（.json）
+        <input id="script-file-input" type="file" accept=".json,application/json" />
+      </label>
+      <label>方式2：文本粘贴导入
+        <textarea id="script-text-input" rows="10" placeholder='粘贴 Day1 Session Script JSON...'></textarea>
+      </label>
+      <button id="import-text-btn">导入粘贴内容</button>
     </section>
     <section class="card">
       <h2>最近一次本地记录</h2>
@@ -62,6 +92,25 @@ function renderLoadPage() {
     state.page = "run";
     startTicker();
     render();
+  };
+
+  const fileInput = document.getElementById("script-file-input");
+  fileInput.onchange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const rawText = await file.text();
+    applyImportedScript(rawText, `文件：${file.name}`);
+  };
+
+  document.getElementById("import-text-btn").onclick = () => {
+    const rawText = document.getElementById("script-text-input").value.trim();
+    if (!rawText) {
+      state.importError = "导入失败：请先粘贴 JSON 内容。";
+      state.importMessage = "";
+      render();
+      return;
+    }
+    applyImportedScript(rawText, "文本粘贴");
   };
 }
 

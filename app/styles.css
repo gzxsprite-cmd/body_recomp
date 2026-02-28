@@ -67,3 +67,17 @@ pre {
   border-left: 4px solid #f0b429;
   padding: 8px;
 }
+
+.ok-msg {
+  background: #e8f7ee;
+  color: #12733d;
+  border-left: 4px solid #22a559;
+  padding: 8px;
+}
+
+.error-msg {
+  background: #fdecec;
+  color: #b42318;
+  border-left: 4px solid #d92d20;
+  padding: 8px;
+}

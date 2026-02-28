@@ -23,7 +23,10 @@ python3 -m http.server 5173
 ## 2. 页面说明
 
 1. **Session 加载/开始页**
-   - 加载示例 `sample_session_script.json`
+   - 默认加载示例 `sample_session_script.json`
+   - 支持文件选择导入（`.json`）
+   - 支持文本粘贴导入（textarea）
+   - 导入后进行基础校验（JSON 格式 + session_id/session_name/total_steps/steps）
    - 展示 Session 概要并开始训练
 
 2. **训练执行页**
@@ -93,9 +96,10 @@ python3 -m http.server 5173
 
 ## 6. 本地验证建议
 
-1. 正常完整训练至结束，确认 `session_complete`
-2. 训练中点击暂停/继续，确认 `pause` / `resume`
-3. 点击跳过，确认 `skip`，并在反馈页补填原因
-4. 点击休息后再 +60，确认 `rest_start` / `rest_extend` / `rest_end`
-5. 点击结束训练，确认 `end_session` 且 Session Result 中 `ended_early=true`
-6. 提交反馈，确认 `post_feedback_submit`
+1. 在加载页使用“文件导入”或“文本粘贴导入”加载自定义 Session Script，校验通过后确认 Session 信息（名称/step/计划组数）已更新
+2. 正常完整训练至结束，确认 `session_complete`
+3. 训练中点击暂停/继续，确认 `pause` / `resume`
+4. 点击跳过，确认 `skip`，并在反馈页补填原因
+5. 点击休息后再 +60，确认 `rest_start` / `rest_extend` / `rest_end`
+6. 点击结束训练，确认 `end_session` 且 Session Result 中 `ended_early=true`
+7. 提交反馈，确认 `post_feedback_submit`
