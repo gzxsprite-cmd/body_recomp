@@ -56,32 +56,50 @@ function applyImportedScript(rawText, sourceLabel) {
   render();
 }
 
+function restartCurrentSession() {
+  const confirmed = window.confirm("确认重新开始本次训练？当前进度和未提交事件将被清空。");
+  if (!confirmed) return;
+
+  state.engine = new TimerEngine(state.script);
+  state.engine.startSession();
+  state.feedbackSubmitted = false;
+  state.sessionResult = null;
+  state.eventLogs = [];
+  state.page = "run";
+  startTicker();
+  render();
+}
+
 function renderLoadPage() {
   const steps = state.script?.steps ?? [];
   const plannedSets = steps.reduce((acc, s) => acc + s.sets, 0);
   const lastData = loadLastSessionData();
   app.innerHTML = `
-    <section class="card">
-      <h1>训练计时器 MVP</h1>
-      <p><strong>Session:</strong> ${state.script.session_name}</p>
-      <p><strong>Step 数:</strong> ${state.script.total_steps}</p>
-      <p><strong>计划组数:</strong> ${plannedSets}</p>
+    <section class="card surface-primary">
+      <h1 class="page-title">训练计时器 MVP</h1>
+      <div class="info-grid">
+        <p><span class="k">Session</span><span>${state.script.session_name}</span></p>
+        <p><span class="k">Step 数</span><span>${state.script.total_steps}</span></p>
+        <p><span class="k">计划组数</span><span>${plannedSets}</span></p>
+      </div>
       ${state.importMessage ? `<p class="ok-msg">${state.importMessage}</p>` : ""}
       ${state.importError ? `<p class="error-msg">${state.importError}</p>` : ""}
-      <button id="start-session">开始训练</button>
+      <button id="start-session" class="touch-btn touch-btn-primary">开始训练</button>
     </section>
+
     <section class="card">
-      <h2>导入 Session Script JSON</h2>
+      <h2 class="section-title">导入 Session Script JSON</h2>
       <label>方式1：文件选择导入（.json）
         <input id="script-file-input" type="file" accept=".json,application/json" />
       </label>
       <label>方式2：文本粘贴导入
-        <textarea id="script-text-input" rows="10" placeholder='粘贴 Day1 Session Script JSON...'></textarea>
+        <textarea id="script-text-input" rows="8" placeholder='粘贴 Day1 Session Script JSON...'></textarea>
       </label>
-      <button id="import-text-btn">导入粘贴内容</button>
+      <button id="import-text-btn" class="touch-btn">导入粘贴内容</button>
     </section>
+
     <section class="card">
-      <h2>最近一次本地记录</h2>
+      <h2 class="section-title">最近一次本地记录</h2>
       <p>${lastData.sessionResult ? `最近训练：${lastData.sessionResult.session_name}` : "暂无"}</p>
     </section>
   `;
@@ -139,23 +157,47 @@ function renderRunPage() {
 
   const requirement = labelRequirement(step);
   app.innerHTML = `
-    <section class="card">
-      <h1>训练执行页</h1>
-      <p><strong>动作：</strong>${step.action_name}</p>
-      <p><strong>要求：</strong>${requirement}</p>
-      <p><strong>组数：</strong>${engine.currentSet}/${step.sets}</p>
-      <p><strong>动作倒计时：</strong>${step.action_type === "timed" ? engine.remainingSeconds : "reps动作"}</p>
-      <p><strong>休息倒计时：</strong>${engine.isResting ? engine.restRemainingSeconds : "-"}</p>
-      <p><strong>下一动作：</strong>${engine.nextStep ? engine.nextStep.action_name : "无（最后一项）"}</p>
-      <p><strong>整体进度：</strong>${step.step_no}/${state.script.total_steps}</p>
+    <section class="card surface-primary">
+      <h1 class="page-title">训练执行页</h1>
+      <p class="action-name">${step.action_name}</p>
+      <div class="hero-grid">
+        <div class="hero-item">
+          <p class="hero-label">动作要求</p>
+          <p class="hero-value">${requirement}</p>
+        </div>
+        <div class="hero-item">
+          <p class="hero-label">当前组数</p>
+          <p class="hero-value">${engine.currentSet}/${step.sets}</p>
+        </div>
+        <div class="hero-item">
+          <p class="hero-label">动作倒计时</p>
+          <p class="hero-value hero-timer">${step.action_type === "timed" ? engine.remainingSeconds : "Reps"}</p>
+        </div>
+        <div class="hero-item">
+          <p class="hero-label">休息倒计时</p>
+          <p class="hero-value hero-timer">${engine.isResting ? engine.restRemainingSeconds : "-"}</p>
+        </div>
+      </div>
+
+      <div class="minor-info">
+        <p><span class="k">整体进度</span><span>${step.step_no}/${state.script.total_steps}</span></p>
+        <p><span class="k">下一动作</span><span>${engine.nextStep ? engine.nextStep.action_name : "无（最后一项）"}</span></p>
+      </div>
       <p class="safe-tip"><strong>安全提示：</strong>${step.safety_tip || "无"}</p>
-      <div class="buttons">
-        <button id="pause-btn">${engine.isPaused ? "继续" : "暂停"}</button>
-        <button id="skip-btn">跳过</button>
-        <button id="rest-btn">休息(60s)</button>
-        <button id="rest-plus-btn" ${engine.isResting ? "" : "disabled"}>+60秒</button>
-        <button id="rep-complete-btn" ${step.action_type === "reps" ? "" : "disabled"}>完成当前组</button>
-        <button id="end-btn" class="danger">结束训练</button>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">训练控制</h2>
+      <div class="touch-grid">
+        <button id="pause-btn" class="touch-btn touch-btn-primary">${engine.isPaused ? "继续" : "暂停"}</button>
+        <button id="rest-btn" class="touch-btn">休息 (60s)</button>
+        <button id="rest-plus-btn" class="touch-btn" ${engine.isResting ? "" : "disabled"}>+60秒</button>
+        <button id="skip-btn" class="touch-btn">跳过</button>
+        <button id="rep-complete-btn" class="touch-btn" ${step.action_type === "reps" ? "" : "disabled"}>完成当前组</button>
+        <button id="restart-btn" class="touch-btn touch-btn-warning">重新开始</button>
+      </div>
+      <div class="danger-zone">
+        <button id="end-btn" class="touch-btn touch-btn-danger">结束训练</button>
       </div>
     </section>
   `;
@@ -181,6 +223,9 @@ function renderRunPage() {
     engine.completeRepSet();
     render();
   };
+  document.getElementById("restart-btn").onclick = () => {
+    restartCurrentSession();
+  };
   document.getElementById("end-btn").onclick = () => {
     engine.endSession();
     state.page = "feedback";
@@ -194,8 +239,8 @@ function renderFeedbackPage() {
   const needEndReason = engine.eventLogs.some((e) => e.event_code === "end_session");
 
   app.innerHTML = `
-    <section class="card">
-      <h1>训练后反馈与导出</h1>
+    <section class="card surface-primary">
+      <h1 class="page-title">训练后反馈与导出</h1>
       <form id="feedback-form">
         <label>整体难度
           <select name="overall_difficulty" required>
@@ -212,22 +257,25 @@ function renderFeedbackPage() {
         </label>
         ${needSkipReason ? '<label>跳过原因 <textarea name="skip_reason_text" required></textarea></label>' : ""}
         ${needEndReason ? '<label>提前结束原因 <textarea name="end_reason_text" required></textarea></label>' : ""}
-        <button type="submit">提交反馈</button>
+        <button type="submit" class="touch-btn touch-btn-primary">提交反馈</button>
       </form>
+
       <div id="export-panel" ${state.feedbackSubmitted ? "" : "class=hidden"}>
-        <h2>导出 JSON</h2>
-        <button id="export-result">导出 Session Result</button>
-        <button id="export-events">导出 Event Logs</button>
+        <h2 class="section-title">导出 JSON</h2>
+        <div class="touch-grid">
+          <button id="export-result" class="touch-btn">导出 Session Result</button>
+          <button id="export-events" class="touch-btn">导出 Event Logs</button>
+        </div>
       </div>
       <div id="summary"></div>
-      <button id="back-home">返回首页</button>
+      <button id="back-home" class="touch-btn">返回首页</button>
     </section>
   `;
 
   const summary = document.getElementById("summary");
   if (state.sessionResult) {
     summary.innerHTML = `
-      <h2>Session Result 摘要</h2>
+      <h2 class="section-title">Session Result 摘要</h2>
       <pre>${JSON.stringify(state.sessionResult, null, 2)}</pre>
     `;
   }

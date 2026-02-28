@@ -29,15 +29,17 @@ python3 -m http.server 5173
    - 导入后进行基础校验（JSON 格式 + session_id/session_name/total_steps/steps）
    - 展示 Session 概要并开始训练
 
-2. **训练执行页**
-   - 显示当前动作、目标、组数、倒计时、休息计时、下一动作、整体进度、安全提示
+2. **训练执行页（触控优先）**
+   - iPad 友好布局：大卡片、大字号、清晰分区
+   - 优先突出：当前动作、组数、动作要求、倒计时
    - 支持按钮：
      - 暂停（pause）/继续（resume）
      - 跳过（skip）
      - 休息（rest_start，默认 60 秒）
      - +60 秒（rest_extend）
+     - 完成当前组（reps动作）
+     - **重新开始**（重置本次未提交训练进度与临时事件）
      - 结束训练（end_session）
-   - reps 动作支持“完成当前组”推进（MVP最小实现）
 
 3. **训练后反馈与导出页**
    - 整体难度：太简单/刚好/太难
@@ -102,4 +104,5 @@ python3 -m http.server 5173
 4. 点击跳过，确认 `skip`，并在反馈页补填原因
 5. 点击休息后再 +60，确认 `rest_start` / `rest_extend` / `rest_end`
 6. 点击结束训练，确认 `end_session` 且 Session Result 中 `ended_early=true`
-7. 提交反馈，确认 `post_feedback_submit`
+7. 在训练执行页点击“重新开始”，确认回到第一步第一组，且无需重新导入 Session
+8. 提交反馈，确认 `post_feedback_submit`
