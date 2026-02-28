@@ -5,16 +5,45 @@
 - 训练执行（timed + reps 最小流程）
 - 训练事件日志记录（9 个 event_code）
 - 训练后反馈
-- Session Result / Event Logs JSON 导出
+- 提交反馈后自动落盘到本地目录（`data/inbox/`）
+- Session Result / Event Logs JSON 手动导出（兜底）
 - localStorage 本地持久化（最近一次训练）
 
 ## 1. 运行方式
 
-本项目采用无依赖静态网页实现（便于快速跑通 MVP）。
+### 1.1 启动本地保存代理（Flask）
+
+先安装依赖：
+
+```bash
+cd server
+python3 -m pip install -r requirements.txt
+```
+
+```bash
+cd server
+python3 save_proxy.py
+```
+
+Windows (PowerShell) 示例：
+```powershell
+cd server
+python .\save_proxy.py
+```
+
+默认地址：`http://127.0.0.1:8765`
+
+### 1.2 启动前端
 
 ```bash
 cd app
 python3 -m http.server 5173
+```
+
+Windows (PowerShell) 示例：
+```powershell
+cd app
+python -m http.server 5173
 ```
 
 打开浏览器访问：
@@ -46,7 +75,8 @@ python3 -m http.server 5173
    - 疲劳评分：1-10
    - 疼痛/不适位置：可选文本
    - 如果本次发生 skip 或 end_session，则显示对应原因输入
-   - 导出：`Session Result JSON` / `Event Logs JSON`
+   - 提交后自动调用本地保存代理（成功/失败提示）
+   - 导出：`Session Result JSON` / `Event Logs JSON`（自动保存失败时兜底）
 
 ## 3. 数据契约
 
@@ -106,3 +136,16 @@ python3 -m http.server 5173
 6. 点击结束训练，确认 `end_session` 且 Session Result 中 `ended_early=true`
 7. 在训练执行页点击“重新开始”，确认回到第一步第一组，且无需重新导入 Session
 8. 提交反馈，确认 `post_feedback_submit`
+
+
+## 7. 自动落盘文件命名
+
+默认保存目录：`data/inbox/`
+
+文件名规范：
+- `{timestamp}__{session_name_slug}__session_result.json`
+- `{timestamp}__{session_name_slug}__event_logs.json`
+
+示例：
+- `20260228_120501__mvp_下肢与核心训练__session_result.json`
+- `20260228_120501__mvp_下肢与核心训练__event_logs.json`

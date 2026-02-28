@@ -2,6 +2,8 @@ import { TimerEngine } from "./core/timerEngine.js";
 import { parseAndValidateSessionScript } from "./core/sessionScriptValidator.js";
 import { saveLastSessionData, loadLastSessionData } from "./storage/localStore.js";
 
+const SAVE_PROXY_URL = "http://127.0.0.1:8765/save-session";
+
 const state = {
   page: "load",
   script: null,
@@ -10,7 +12,8 @@ const state = {
   sessionResult: null,
   eventLogs: [],
   importMessage: "",
-  importError: ""
+  importError: "",
+  autoSaveStatus: null
 };
 
 const app = document.getElementById("app");
@@ -56,6 +59,39 @@ function applyImportedScript(rawText, sourceLabel) {
   render();
 }
 
+function createSaveTimestamp() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+
+async function autoSaveSessionFiles(sessionResult, eventLogs) {
+  const response = await fetch(SAVE_PROXY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_result: sessionResult,
+      event_logs: eventLogs,
+      session_name: sessionResult.session_name,
+      timestamp: createSaveTimestamp()
+    })
+  });
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch (_e) {
+    payload = null;
+  }
+
+  if (!response.ok || !payload?.success) {
+    const detail = payload?.error || `HTTP ${response.status}`;
+    throw new Error(detail);
+  }
+
+  return payload;
+}
+
 function restartCurrentSession() {
   const confirmed = window.confirm("确认重新开始本次训练？当前进度和未提交事件将被清空。");
   if (!confirmed) return;
@@ -65,6 +101,7 @@ function restartCurrentSession() {
   state.feedbackSubmitted = false;
   state.sessionResult = null;
   state.eventLogs = [];
+  state.autoSaveStatus = null;
   state.page = "run";
   startTicker();
   render();
@@ -107,6 +144,7 @@ function renderLoadPage() {
   document.getElementById("start-session").onclick = () => {
     state.engine = new TimerEngine(state.script);
     state.engine.startSession();
+    state.autoSaveStatus = null;
     state.page = "run";
     startTicker();
     render();
@@ -260,6 +298,8 @@ function renderFeedbackPage() {
         <button type="submit" class="touch-btn touch-btn-primary">提交反馈</button>
       </form>
 
+      ${state.autoSaveStatus ? `<p class="${state.autoSaveStatus.type === "success" ? "ok-msg" : "error-msg"}">${state.autoSaveStatus.message}</p>` : ""}
+
       <div id="export-panel" ${state.feedbackSubmitted ? "" : "class=hidden"}>
         <h2 class="section-title">导出 JSON</h2>
         <div class="touch-grid">
@@ -280,7 +320,7 @@ function renderFeedbackPage() {
     `;
   }
 
-  document.getElementById("feedback-form").onsubmit = (e) => {
+  document.getElementById("feedback-form").onsubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const feedback = Object.fromEntries(formData.entries());
@@ -298,6 +338,20 @@ function renderFeedbackPage() {
     state.eventLogs = engine.eventLogs;
     saveLastSessionData(state.sessionResult, state.eventLogs);
     state.feedbackSubmitted = true;
+
+    try {
+      const saveResult = await autoSaveSessionFiles(state.sessionResult, state.eventLogs);
+      state.autoSaveStatus = {
+        type: "success",
+        message: `自动保存成功：${saveResult.saved_dir}`
+      };
+    } catch (err) {
+      state.autoSaveStatus = {
+        type: "error",
+        message: `自动保存失败：${err.message}。你仍可使用下方按钮手动导出 JSON。`
+      };
+    }
+
     render();
   };
 
@@ -314,6 +368,7 @@ function renderFeedbackPage() {
     state.feedbackSubmitted = false;
     state.sessionResult = null;
     state.eventLogs = [];
+    state.autoSaveStatus = null;
     render();
   };
 }
