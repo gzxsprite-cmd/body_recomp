@@ -1,0 +1,231 @@
+# 10_Codex开发任务说明｜训练计时器MVP + 数据记录后台（v0.1）
+
+## 1. 目标（MVP）
+
+开发一个“训练计时器 + 数据记录后台”的最小可用版本（MVP），用于执行个人训练计划，并记录训练结果供后续复盘调参使用。
+
+本系统定位：
+
+* 前端：极简训练计时器（大字、少交互）
+* 后端：训练Session与事件记录
+* 接口：可导入训练计划（Session Script），可导出训练结果（Session Result + Event Logs）
+
+## 2. 业务背景（为什么做）
+
+本项目并非通用健身APP，而是个人训练闭环系统的一部分：
+
+* ChatGPT Project 负责：个人档案、目标、训练计划生成、复盘调参
+* 计时器MVP负责：执行计划 + 采集训练过程数据
+* 双方通过统一数据字典和计划模板对接
+
+MVP成功标准：
+
+1. 能跑一整次训练 Session（按步骤执行）
+2. 能完成暂停/跳过/休息/结束训练控制
+3. 能记录Session结果与事件日志
+4. 结果数据可用于后续周复盘分析
+
+## 3. 已有规范（必须遵守）
+
+开发实现必须对齐以下项目数据源文件（由ChatGPT侧维护）：
+
+* `08_训练计时器交互规范_MVP.md`
+* `09_训练执行事件字典_v0.1.md`
+
+## 4. MVP功能范围（必须做）
+
+### 4.1 训练计时器前端（Session级）
+
+* 加载一份训练 Session Script（结构化数据）
+* 按顺序展示训练步骤（热身/主训练/放松）
+* 显示内容：
+
+  * 当前动作名称
+  * 动作要求（次数/秒数）
+  * 当前组数 / 总组数
+  * 动作倒计时（计时型）
+  * 休息倒计时
+  * 下一动作预告
+  * 整体进度（step x / total）
+  * 安全提示（如有）
+* 控制按钮：
+
+  * 暂停
+  * 跳过
+  * 休息（默认60s，可+60s）
+  * 结束训练
+
+### 4.2 训练后反馈页（Session结束）
+
+采集字段（MVP）：
+
+* 整体难度：太简单 / 刚好 / 太难
+* 主观疲劳评分：1-10
+* 疼痛/不适位置（可选文本）
+* 如发生跳过/提前结束：原因文本（至少1处可填写）
+
+### 4.3 数据记录后台（MVP）
+
+记录以下两类数据：
+
+1. Session结果（session summary）
+2. 事件日志（event logs）
+
+支持：
+
+* 本地持久化（MVP可先本地文件/SQLite）
+* 可导出 JSON（必须）
+* 后续可扩展 API（本版可先不做远程服务）
+
+## 5. MVP不做（明确边界）
+
+* 语音播报
+* 动作识别
+* 穿戴设备联动
+* 用户系统/登录
+* 云同步
+* 图表报表
+* 智能推荐引擎（训练中）
+
+## 6. 技术实现建议（可调整）
+
+> 以“快做出可跑版本”为优先。
+
+建议优先方案（任选其一）：
+
+* Web本地版：React + 本地存储（IndexedDB/localStorage）+ JSON导出
+* Python桌面简版：Streamlit（快速验证）+ 本地JSON/SQLite
+* Web前后端版：React + FastAPI + SQLite（稍重）
+
+要求：
+
+* 代码结构清晰
+* 核心逻辑与UI分离
+* 数据结构严格对齐数据字典
+* 可读性优先于花哨效果
+
+## 7. 数据契约（核心）
+
+### 7.1 输入：Session Script（训练计划执行脚本）
+
+计时器加载的训练计划必须为结构化对象，至少包含：
+
+* session_id
+* session_name
+* total_steps
+* steps[] （按顺序）
+
+每个 step 至少包含：
+
+* step_no
+* action_name
+* action_type（"reps" | "timed"）
+* target_reps 或 target_seconds
+* sets
+* rest_seconds
+* safety_tip（可空）
+* alternative_action（可空）
+* rep_mode（"free" | "timed_suggestion"；次数型动作使用）
+* phase（"warmup" | "main" | "cooldown"）
+
+### 7.2 输出：Session Result（训练结果摘要）
+
+至少包含：
+
+* session_id
+* session_name
+* start_time
+* end_time
+* duration_seconds
+* planned_steps
+* completed_steps
+* planned_sets
+* completed_sets
+* ended_early（bool）
+* ended_on_step_no（可空）
+* ended_on_action_name（可空）
+* overall_difficulty（"easy" | "just_right" | "hard"）
+* fatigue_score（1-10）
+* discomfort_notes（可空文本）
+
+### 7.3 输出：Event Logs（事件日志数组）
+
+每条事件至少包含：
+
+* event_id
+* session_id
+* event_code（必须来自执行事件字典）
+* timestamp
+* step_no（可空，若与动作相关则必填）
+* action_name（可空）
+* payload（对象，按事件类型扩展）
+
+## 8. 关键交互逻辑（必须实现）
+
+### 8.1 跳过（skip）
+
+* 点击后立即进入下一步
+* 记录 skip 事件（含当前动作）
+* 在训练后反馈页提供“跳过原因”文本填写（可统一字段）
+
+### 8.2 休息（rest）
+
+* 默认开始60秒休息
+* 支持多次 +60秒
+* 记录 rest_start / rest_extend / rest_end 事件
+
+### 8.3 暂停（pause）
+
+* 暂停当前计时
+* 恢复时记录 resume 事件
+* 不丢失当前步骤进度
+
+### 8.4 结束训练（end_session）
+
+* 立即结束 Session
+* 记录 end_session 事件
+* 进入训练后反馈页
+* Session Result 标记 ended_early=true
+
+## 9. 最小可运行页面（MVP）
+
+至少包含 3 个界面：
+
+1. Session加载/开始页（可先内置测试数据）
+2. 训练执行页（计时器主页面）
+3. 训练后反馈与导出页（显示摘要 + 导出JSON）
+
+## 10. 验收标准（手工测试）
+
+至少通过以下测试：
+
+* 能加载1份示例Session Script并完整执行到结束
+* 训练中可暂停/恢复且计时继续正确
+* 跳过动作后进入下一步且有日志
+* 休息可默认60秒并支持+60秒
+* 提前结束训练后能进入反馈页并导出结果
+* 导出的JSON包含Session Result与Event Logs
+
+## 11. 交付物要求（Codex输出）
+
+请生成：
+
+1. 可运行代码（MVP）
+2. README（运行方法）
+3. 示例Session Script JSON（用于测试）
+4. 示例导出结果JSON（Session Result + Event Logs）
+5. 关键数据结构说明（与事件字典映射关系）
+
+## 12. 开发策略建议（分阶段）
+
+* Phase 1：先跑通timed动作 + 按钮 + JSON导出
+* Phase 2：补reps动作的组数流程与rest逻辑细化
+* Phase 3：优化界面与错误处理
+
+## 13. 注意事项（个体化训练场景）
+
+本系统服务于“有关节风险管理的个人训练计划执行”场景：
+
+* UI需允许快速暂停/结束
+* 安全提示需明显但不打断操作
+* 不做“硬逼完成”的交互设计
