@@ -3,10 +3,13 @@ import { parseAndValidateSessionScript } from "./core/sessionScriptValidator.js"
 import { saveLastSessionData, loadLastSessionData } from "./storage/localStore.js";
 
 const SAVE_PROXY_URL = "http://127.0.0.1:8765/save-session";
+const TODAY_SESSION_URL = "http://127.0.0.1:8765/today-session";
 
 const state = {
   page: "load",
   script: null,
+  scriptFilePath: null,
+  todaySessionStatus: null,
   engine: null,
   feedbackSubmitted: false,
   sessionResult: null,
@@ -38,10 +41,48 @@ function render() {
   if (state.page === "feedback") renderFeedbackPage();
 }
 
-async function init() {
+async function loadDefaultSample() {
   const resp = await fetch("./data/sample_session_script.json");
   state.script = await resp.json();
-  render();
+  state.scriptFilePath = null;
+}
+
+async function init() {
+  try {
+    const resp = await fetch(TODAY_SESSION_URL);
+    if (!resp.ok) {
+      await loadDefaultSample();
+      state.todaySessionStatus = "TODAY_SESSION_PROXY_UNAVAILABLE";
+      render();
+      return;
+    }
+
+    const data = await resp.json();
+    if (data.success) {
+      state.script = data.session_script;
+      state.scriptFilePath = data.session_file_path;
+      state.todaySessionStatus = null;
+      render();
+      return;
+    }
+
+    if (data.status_code === "NO_SESSION_FOR_TODAY") {
+      state.todaySessionStatus = "NO_SESSION_FOR_TODAY";
+      state.script = null;
+      state.scriptFilePath = null;
+      render();
+      return;
+    }
+
+    state.todaySessionStatus = data.status_code || "TODAY_SESSION_LOAD_FAILED";
+    state.script = null;
+    state.scriptFilePath = null;
+    render();
+  } catch (_e) {
+    await loadDefaultSample();
+    state.todaySessionStatus = "TODAY_SESSION_PROXY_UNAVAILABLE";
+    render();
+  }
 }
 
 function applyImportedScript(rawText, sourceLabel) {
@@ -54,6 +95,8 @@ function applyImportedScript(rawText, sourceLabel) {
   }
 
   state.script = script;
+  state.scriptFilePath = null;
+  state.todaySessionStatus = null;
   state.importError = "";
   state.importMessage = `已成功导入：${script.session_name}（来源：${sourceLabel}）`;
   render();
@@ -65,7 +108,7 @@ function createSaveTimestamp() {
   return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
 
-async function autoSaveSessionFiles(sessionResult, eventLogs) {
+async function autoSaveSessionFiles(sessionResult, eventLogs, completedSteps) {
   const response = await fetch(SAVE_PROXY_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -73,6 +116,8 @@ async function autoSaveSessionFiles(sessionResult, eventLogs) {
       session_result: sessionResult,
       event_logs: eventLogs,
       session_name: sessionResult.session_name,
+      session_file_path: state.scriptFilePath,
+      completed_steps: completedSteps,
       timestamp: createSaveTimestamp()
     })
   });
@@ -115,13 +160,15 @@ function renderLoadPage() {
     <section class="card surface-primary">
       <h1 class="page-title">训练计时器 MVP</h1>
       <div class="info-grid">
-        <p><span class="k">Session</span><span>${state.script.session_name}</span></p>
-        <p><span class="k">Step 数</span><span>${state.script.total_steps}</span></p>
-        <p><span class="k">计划组数</span><span>${plannedSets}</span></p>
+        <p><span class="k">Session</span><span>${state.script ? state.script.session_name : "未加载"}</span></p>
+        <p><span class="k">Step 数</span><span>${state.script ? state.script.total_steps : "-"}</span></p>
+        <p><span class="k">计划组数</span><span>${state.script ? plannedSets : "-"}</span></p>
       </div>
+      ${state.todaySessionStatus === "NO_SESSION_FOR_TODAY" ? '<p class="error-msg">NO_SESSION_FOR_TODAY：今天没有可执行课程，请手动导入 Session Script。</p>' : ""}
+      ${state.todaySessionStatus === "TODAY_SESSION_PROXY_UNAVAILABLE" ? '<p class="error-msg">自动定位服务不可用，已回退到内置示例。</p>' : ""}
       ${state.importMessage ? `<p class="ok-msg">${state.importMessage}</p>` : ""}
       ${state.importError ? `<p class="error-msg">${state.importError}</p>` : ""}
-      <button id="start-session" class="touch-btn touch-btn-primary">开始训练</button>
+      <button id="start-session" class="touch-btn touch-btn-primary" ${state.script ? "" : "disabled"}>开始训练</button>
     </section>
 
     <section class="card">
@@ -141,14 +188,17 @@ function renderLoadPage() {
     </section>
   `;
 
-  document.getElementById("start-session").onclick = () => {
-    state.engine = new TimerEngine(state.script);
-    state.engine.startSession();
-    state.autoSaveStatus = null;
-    state.page = "run";
-    startTicker();
-    render();
-  };
+  const startBtn = document.getElementById("start-session");
+  if (state.script) {
+    startBtn.onclick = () => {
+      state.engine = new TimerEngine(state.script);
+      state.engine.startSession();
+      state.autoSaveStatus = null;
+      state.page = "run";
+      startTicker();
+      render();
+    };
+  }
 
   const fileInput = document.getElementById("script-file-input");
   fileInput.onchange = async (e) => {
@@ -339,11 +389,13 @@ function renderFeedbackPage() {
     saveLastSessionData(state.sessionResult, state.eventLogs);
     state.feedbackSubmitted = true;
 
+    const completedSteps = Array.from(engine.completedSteps || []).sort((a, b) => Number(a) - Number(b));
+
     try {
-      const saveResult = await autoSaveSessionFiles(state.sessionResult, state.eventLogs);
+      const saveResult = await autoSaveSessionFiles(state.sessionResult, state.eventLogs, completedSteps);
       state.autoSaveStatus = {
         type: "success",
-        message: `自动保存成功：${saveResult.saved_dir}`
+        message: `自动保存成功：${saveResult.run_file_path || saveResult.saved_dir}`
       };
     } catch (err) {
       state.autoSaveStatus = {

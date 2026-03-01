@@ -5,11 +5,17 @@
 - 训练执行（timed + reps 最小流程）
 - 训练事件日志记录（9 个 event_code）
 - 训练后反馈
-- 提交反馈后自动落盘到本地目录（`data/inbox/`）
+- 启动时自动定位当天课程（`BASE/06_sessions/weekYYYY_WW/session_YYYYMMDD_*.json`）
+- 提交反馈后自动落盘 run 结果（`BASE/07_runs/`）
 - Session Result / Event Logs JSON 手动导出（兜底）
 - localStorage 本地持久化（最近一次训练）
 
 ## 1. 运行方式
+
+固定路径（WSL）：
+- `ROOT = /mnt/c/Users/gzxsp/training_hub`
+- `BASE = /mnt/c/Users/gzxsp/training_hub/body_recomp`
+
 
 ### 1.1 启动本地保存代理（Flask）
 
@@ -75,7 +81,10 @@ python -m http.server 5173
    - 疲劳评分：1-10
    - 疼痛/不适位置：可选文本
    - 如果本次发生 skip 或 end_session，则显示对应原因输入
-   - 提交后自动调用本地保存代理（成功/失败提示）
+   - 提交后自动调用本地保存代理：
+     - 保留 `session_result` / `event_logs` 保存（兜底）
+     - 生成 `BASE/07_runs/run_YYYYMMDD_HHMMSS_<session_id>.json`
+     - 可选更新 `BASE/07_runs/latest_run.json`
    - 导出：`Session Result JSON` / `Event Logs JSON`（自动保存失败时兜底）
 
 ## 3. 数据契约
@@ -149,3 +158,30 @@ python -m http.server 5173
 示例：
 - `20260228_120501__mvp_下肢与核心训练__session_result.json`
 - `20260228_120501__mvp_下肢与核心训练__event_logs.json`
+
+
+## 8. 自动定位当天 Session（today-session）
+
+本地代理提供：`GET http://127.0.0.1:8765/today-session`
+
+定位规则：
+1. 获取今天 `D=YYYYMMDD`
+2. 计算 ISO week：`Y=%G`, `W=%V`
+3. 匹配 `BASE/06_sessions/week{Y}_{W}/session_{D}_*.json`
+4. 若多个匹配，按文件名排序取第一个
+5. 若无匹配，返回 `NO_SESSION_FOR_TODAY`（前端提示但不中断）
+
+## 9. Run结果文件（07_runs）
+
+每次提交反馈后，代理自动写入：
+- `BASE/07_runs/run_YYYYMMDD_HHMMSS_<session_id>.json`
+
+核心字段：
+- `session_id`
+- `session_file_path`
+- `start_time`, `end_time`, `duration_seconds`
+- `completed_steps`, `skipped_steps`
+- `event_log[]`（`time/type/current_step_no`）
+
+可选指针文件：
+- `BASE/07_runs/latest_run.json`
