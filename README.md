@@ -12,9 +12,10 @@
 
 ## 1. 运行方式
 
-固定路径（WSL）：
-- `ROOT = /mnt/c/Users/gzxsp/training_hub`
-- `BASE = /mnt/c/Users/gzxsp/training_hub/body_recomp`
+固定路径（Windows）：
+- 默认 `DATA_BASE = C:\Users\gzxsp\training_hub\body_recomp`
+- 可选使用环境变量：`DATA_BASE`（优先）或 `DATA_ROOT`
+- 若误传 `/mnt/c/...` 形式，代理会自动映射为 `C:\...`
 
 
 ### 1.1 启动本地保存代理（Flask）

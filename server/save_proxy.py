@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import glob
 import json
+import os
 import re
 from datetime import datetime
 from pathlib import Path
@@ -9,8 +10,29 @@ from typing import Any
 
 from flask import Flask, jsonify, request
 
-ROOT = Path("/mnt/c/Users/gzxsp/training_hub")
-BASE = Path("/mnt/c/Users/gzxsp/training_hub/body_recomp")
+DEFAULT_WINDOWS_BASE = r"C:\Users\gzxsp\training_hub\body_recomp"
+
+
+def wsl_to_windows_path(raw_path: str) -> str:
+    """Convert /mnt/c/... style to C:\\... style when needed."""
+    if not isinstance(raw_path, str):
+        return raw_path
+    normalized = raw_path.strip()
+    match = re.match(r"^/mnt/([a-zA-Z])/(.*)$", normalized)
+    if not match:
+        return normalized
+    drive = match.group(1).upper()
+    tail = match.group(2).replace("/", "\\")
+    return f"{drive}:\\{tail}"
+
+
+def resolve_data_base() -> Path:
+    configured = os.getenv("DATA_BASE") or os.getenv("DATA_ROOT") or DEFAULT_WINDOWS_BASE
+    configured = wsl_to_windows_path(configured)
+    return Path(configured)
+
+
+BASE = resolve_data_base()
 SESSIONS_DIR = BASE / "06_sessions"
 RUNS_DIR = BASE / "07_runs"
 INBOX_DIR = Path(__file__).resolve().parent.parent / "data" / "inbox"
@@ -50,7 +72,7 @@ def find_today_session(base_path: Path) -> tuple[Path | None, str | None, dict[s
     today = datetime.now()
     day_code = today.strftime("%Y%m%d")
     iso_year, iso_week, _ = today.isocalendar()
-    week_dir = base_path / "06_sessions" / f"week{iso_year}_{iso_week:02d}"
+    week_dir = base_path / f"06_sessions" / f"week{iso_year}_{iso_week:02d}"
     pattern = str(week_dir / f"session_{day_code}_*.json")
     candidates = sorted(glob.glob(pattern))
 
