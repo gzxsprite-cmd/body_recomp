@@ -1,0 +1,128 @@
+[
+  {
+    "event_id": "evt_1700000000001_a1b2c3",
+    "session_id": "session_mvp_001",
+    "event_code": "rest_start",
+    "timestamp": "2026-02-28T09:40:30.000Z",
+    "step_no": 1,
+    "action_name": "开合跳",
+    "payload": {
+      "phase": "rest",
+      "set_index": 2,
+      "set_total": 2,
+      "remaining_seconds": 20,
+      "rest_seconds_planned": 20
+    }
+  },
+  {
+    "event_id": "evt_1700000000002_c3d4e5",
+    "session_id": "session_mvp_001",
+    "event_code": "rest_end",
+    "timestamp": "2026-02-28T09:40:50.000Z",
+    "step_no": 1,
+    "action_name": "开合跳",
+    "payload": {
+      "rest_seconds_actual": 20
+    }
+  },
+  {
+    "event_id": "evt_1700000000003_f6a7b8",
+    "session_id": "session_mvp_001",
+    "event_code": "pause",
+    "timestamp": "2026-02-28T09:42:00.000Z",
+    "step_no": 2,
+    "action_name": "平板支撑",
+    "payload": {
+      "phase": "work",
+      "set_index": 1,
+      "set_total": 2,
+      "remaining_seconds": 15
+    }
+  },
+  {
+    "event_id": "evt_1700000000004_89abcd",
+    "session_id": "session_mvp_001",
+    "event_code": "resume",
+    "timestamp": "2026-02-28T09:42:12.000Z",
+    "step_no": 2,
+    "action_name": "平板支撑",
+    "payload": {
+      "phase": "work",
+      "set_index": 1,
+      "set_total": 2,
+      "remaining_seconds": 15
+    }
+  },
+  {
+    "event_id": "evt_1700000000005_ef0123",
+    "session_id": "session_mvp_001",
+    "event_code": "rest_start",
+    "timestamp": "2026-02-28T09:43:00.000Z",
+    "step_no": 2,
+    "action_name": "平板支撑",
+    "payload": {
+      "phase": "rest",
+      "set_index": 2,
+      "set_total": 2,
+      "remaining_seconds": 30,
+      "rest_seconds_planned": 30
+    }
+  },
+  {
+    "event_id": "evt_1700000000006_456789",
+    "session_id": "session_mvp_001",
+    "event_code": "rest_extend",
+    "timestamp": "2026-02-28T09:43:10.000Z",
+    "step_no": 2,
+    "action_name": "平板支撑",
+    "payload": {
+      "phase": "rest",
+      "set_index": 2,
+      "set_total": 2,
+      "remaining_seconds": 80,
+      "added_seconds": 60,
+      "rest_seconds_total_after": 90
+    }
+  },
+  {
+    "event_id": "evt_1700000000007_987654",
+    "session_id": "session_mvp_001",
+    "event_code": "rest_end",
+    "timestamp": "2026-02-28T09:44:30.000Z",
+    "step_no": 2,
+    "action_name": "平板支撑",
+    "payload": {
+      "rest_seconds_actual": 90
+    }
+  },
+  {
+    "event_id": "evt_1700000000008_123abc",
+    "session_id": "session_mvp_001",
+    "event_code": "session_complete",
+    "timestamp": "2026-02-28T09:46:10.000Z",
+    "step_no": null,
+    "action_name": null,
+    "payload": {
+      "completed_exercise_count": 3,
+      "planned_exercise_count": 3,
+      "completed_set_count": 6,
+      "planned_set_count": 6,
+      "session_duration_seconds": 370
+    }
+  },
+  {
+    "event_id": "evt_1700000000009_abc456",
+    "session_id": "session_mvp_001",
+    "event_code": "post_feedback_submit",
+    "timestamp": "2026-02-28T09:46:30.000Z",
+    "step_no": null,
+    "action_name": null,
+    "payload": {
+      "difficulty_rating": "just_right",
+      "fatigue_score_1_10": 6,
+      "pain_text": "左膝轻微紧张",
+      "skip_reason_text": null,
+      "end_reason_text": null
+    }
+  }
+]

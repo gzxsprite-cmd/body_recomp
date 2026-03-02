@@ -1,0 +1,43 @@
+{
+  "session_id": "session_mvp_001",
+  "session_name": "MVP 下肢与核心训练",
+  "total_steps": 3,
+  "steps": [
+    {
+      "step_no": 1,
+      "action_name": "开合跳",
+      "action_type": "timed",
+      "target_seconds": 30,
+      "sets": 2,
+      "rest_seconds": 20,
+      "safety_tip": "膝盖微屈，轻落地",
+      "alternative_action": "原地高抬腿",
+      "rep_mode": "timed_suggestion",
+      "phase": "warmup"
+    },
+    {
+      "step_no": 2,
+      "action_name": "平板支撑",
+      "action_type": "timed",
+      "target_seconds": 40,
+      "sets": 2,
+      "rest_seconds": 30,
+      "safety_tip": "核心收紧，腰背保持中立",
+      "alternative_action": "膝撑平板",
+      "rep_mode": "timed_suggestion",
+      "phase": "main"
+    },
+    {
+      "step_no": 3,
+      "action_name": "臀桥",
+      "action_type": "reps",
+      "target_reps": 12,
+      "sets": 2,
+      "rest_seconds": 25,
+      "safety_tip": "发力时夹臀，避免腰部代偿",
+      "alternative_action": "徒手半程臀桥",
+      "rep_mode": "free",
+      "phase": "cooldown"
+    }
+  ]
+}

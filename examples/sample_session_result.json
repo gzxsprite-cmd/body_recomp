@@ -1,0 +1,17 @@
+{
+  "session_id": "session_mvp_001",
+  "session_name": "MVP 下肢与核心训练",
+  "start_time": "2026-02-28T09:40:00.000Z",
+  "end_time": "2026-02-28T09:46:30.000Z",
+  "duration_seconds": 390,
+  "planned_steps": 3,
+  "completed_steps": 3,
+  "planned_sets": 6,
+  "completed_sets": 6,
+  "ended_early": false,
+  "ended_on_step_no": null,
+  "ended_on_action_name": null,
+  "overall_difficulty": "just_right",
+  "fatigue_score": 6,
+  "discomfort_notes": "左膝轻微紧张"
+}
